@@ -5,8 +5,9 @@ using UnityEngine.AI;
 
 public class Enemy : MonoBehaviour
 {
-    public Animator Animator { get; private set; }
+    public Animator Animator;
     private BaseState _currentState;
+
     public void SwitchState(BaseState state)
     {
         _currentState.ExitState(this);
@@ -22,6 +23,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] public List<Transform> Waypoints = new List<Transform>();
     [SerializeField] private List<Transform> SpawnPoints = new List<Transform>();
     [HideInInspector] public NavMeshAgent NavMeshAgent;
+    public AudioSource _punchAudio;
     private void StartRetreating()
     {
         SwitchState(RetreatState);
@@ -32,6 +34,7 @@ public class Enemy : MonoBehaviour
     }
     private void Awake()
     {
+        Animator = GetComponent<Animator>();
         _currentState = PatrolState;
         _currentState.EnterState(this);
         NavMeshAgent = GetComponent<NavMeshAgent>();
@@ -39,11 +42,13 @@ public class Enemy : MonoBehaviour
 
     private void Start()
     {
+        NavMeshAgent.enabled = false;
         if (SpawnPoints.Count > 0)
         {
             Transform randomSpawnPoint = SpawnPoints[Random.Range(0, SpawnPoints.Count)];
             transform.position = randomSpawnPoint.position;
         }
+        NavMeshAgent.enabled = true;
         if (Player != null)
         {
             Player.OnPowerUpStart += StartRetreating;
@@ -56,6 +61,21 @@ public class Enemy : MonoBehaviour
         if (_currentState != null)
         {
             _currentState.UpdateState(this);
+        }
+    }
+    public void Dead()
+    {
+        Destroy(gameObject);
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (_currentState != RetreatState)
+        {
+            if (collision.gameObject.CompareTag("Player"))
+            {
+                _punchAudio.Play();
+                collision.gameObject.GetComponent<Player>().Dead();
+            }
         }
     }
 }
