@@ -24,14 +24,17 @@ public class Enemy : MonoBehaviour
     [SerializeField] private List<Transform> SpawnPoints = new List<Transform>();
     [HideInInspector] public NavMeshAgent NavMeshAgent;
     public AudioSource _punchAudio;
+
     private void StartRetreating()
     {
         SwitchState(RetreatState);
     }
+
     private void StopRetreating()
     {
         SwitchState(PatrolState);
     }
+
     private void Awake()
     {
         Animator = GetComponent<Animator>();
@@ -63,10 +66,61 @@ public class Enemy : MonoBehaviour
             _currentState.UpdateState(this);
         }
     }
+
+    private IEnumerator ApplyKnockbackAndFall(Vector3 direction, float speed)
+    {
+        float knockbackDuration = 0.5f;
+        float rotationDuration = 1f;
+        float knockbackElapsed = 0f;
+        float rotationElapsed = 0f;
+
+        Quaternion targetRotation = Quaternion.Euler(90f, transform.rotation.eulerAngles.y, transform.rotation.eulerAngles.z);
+        float rotationSpeed = 2f;
+
+        while (knockbackElapsed < knockbackDuration || rotationElapsed < rotationDuration)
+        {
+            if (knockbackElapsed < knockbackDuration)
+            {
+                transform.Translate(direction * speed * Time.deltaTime, Space.World);
+                knockbackElapsed += Time.deltaTime;
+            }
+
+            if (rotationElapsed < rotationDuration)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+                rotationElapsed += Time.deltaTime;
+            }
+
+            Vector3 newPosition = transform.position;
+            newPosition.y = 0.5f;
+            transform.position = newPosition;
+            yield return null;
+        }
+        transform.rotation = targetRotation;
+    }
     public void Dead()
     {
-        Destroy(gameObject);
+        NavMeshAgent.enabled = false;
+        Animator.SetTrigger("Die");
+        Vector3 fallDirection = -transform.forward;
+        float knockbackSpeed = 5f;
+        StartCoroutine(ApplyKnockbackAndFall(fallDirection, knockbackSpeed));
+        StartCoroutine(RespawnCoroutine());
     }
+    private IEnumerator RespawnCoroutine()
+    {
+        yield return new WaitForSeconds(3f);
+        if (SpawnPoints.Count > 0)
+        {
+            Transform randomSpawnPoint = SpawnPoints[Random.Range(0, SpawnPoints.Count)];
+            transform.position = randomSpawnPoint.position;
+        }
+        Collider collider = GetComponent<Collider>();
+        collider.enabled = true;
+        NavMeshAgent.enabled = true;
+        SwitchState(PatrolState);
+    }
+
     private void OnCollisionEnter(Collision collision)
     {
         if (_currentState != RetreatState)

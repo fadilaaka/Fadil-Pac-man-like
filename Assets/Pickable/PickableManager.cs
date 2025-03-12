@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PickableManager : MonoBehaviour
 {
@@ -28,6 +29,7 @@ public class PickableManager : MonoBehaviour
             {
                 _coinCount++;
             }
+
             positions.Add(pickableObjects[i].transform.position);
         }
         _scoreManager.SetMaxScore(_coinCount);
@@ -54,7 +56,8 @@ public class PickableManager : MonoBehaviour
             _coinCount--;
             if (_coinCount <= 0)
             {
-                Debug.Log("Win");
+                // Debug.Log("Win");
+                SceneManager.LoadScene("WinScene");
             }
             if (_scoreManager != null)
             {
@@ -66,6 +69,22 @@ public class PickableManager : MonoBehaviour
         {
             _powerUpAudio.Play();
             _player?.PickPowerUp();
+        }
+    }
+
+    private void Update()
+    {
+        for (int i = 0; i < _pickableList.Count; i++)
+        {
+            float delay = i * 0.3f;
+            float timeWithDelay = Time.time + delay;
+
+            Vector3 position = _pickableList[i].transform.position;
+            position.y = Mathf.PingPong(timeWithDelay * 0.5f, 1.2f - 0.6f) + 0.6f;
+            _pickableList[i].transform.position = position;
+
+            float rotationSpeed = 100f;
+            _pickableList[i].transform.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
         }
     }
 }
