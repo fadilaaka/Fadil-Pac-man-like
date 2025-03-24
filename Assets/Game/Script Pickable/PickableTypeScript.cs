@@ -1,0 +1,1 @@
+public enum PickableTypeScript { Coin, PowerUp }
