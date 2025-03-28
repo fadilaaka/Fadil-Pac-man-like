@@ -2,8 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using UnityEditor.Callbacks;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -24,7 +22,6 @@ public class PlayerScript : MonoBehaviour
     [SerializeField] private GameObject _healthPrefab;
     private List<GameObject> _healthUnits = new List<GameObject>();
     [SerializeField] private TMP_Text _healthText;
-    public AudioSource _punchAudio;
     private Coroutine _powerUpCoroutine;
     public Action OnPowerUpStart;
     public Action OnPowerUpStop;
@@ -40,6 +37,24 @@ public class PlayerScript : MonoBehaviour
     public LayerMask whatIsGround;
     bool grounded;
 
+    [Header("Audio Settings")]
+    [SerializeField] private AudioSource _footstepAudio;
+    [SerializeField] private AudioClip _footstepClip;
+    [SerializeField] private float _footstepDelay = 0.1f;
+    private Coroutine _footstepCoroutine;
+
+    private IEnumerator PlayFootsteps()
+    {
+        while (true)
+        {
+            if (_footstepClip != null && _footstepAudio != null)
+            {
+                _footstepAudio.PlayOneShot(_footstepClip);
+            }
+            yield return new WaitForSeconds(_footstepDelay);
+
+        }
+    }
     private void UpdateUI()
     {
         foreach (var unit in _healthUnits)
@@ -87,7 +102,7 @@ public class PlayerScript : MonoBehaviour
         else
         {
             _health = 0;
-            SceneManager.LoadScene("LoseScene");
+            SceneManager.LoadScene("GameLoseScene");
         }
         UpdateUI();
     }
@@ -132,7 +147,6 @@ public class PlayerScript : MonoBehaviour
         {
             if (collision.gameObject.CompareTag("Enemy"))
             {
-                _punchAudio.Play();
                 collision.gameObject.GetComponent<Enemy>().Dead();
             }
         }
@@ -159,6 +173,10 @@ public class PlayerScript : MonoBehaviour
     private void MovePlayer()
     {
         movementDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
+        if (Physics.Raycast(transform.position, movementDirection.normalized, out RaycastHit hit, 0.5f, whatIsGround))
+        {
+            movementDirection = Vector3.ProjectOnPlane(movementDirection, hit.normal);
+        }
         _rigidbody.AddForce(movementDirection.normalized * _speed * 10f, ForceMode.Force);
     }
     private void SpeedControl()
@@ -178,8 +196,27 @@ public class PlayerScript : MonoBehaviour
         }
         if (_pauseCanvasGame.activeSelf) return;
 
-        _playerAnimator.SetFloat("Velocity", _rigidbody.linearVelocity.magnitude);
-
+        Vector3 flatVelocity = new Vector3(_rigidbody.linearVelocity.x, 0f, _rigidbody.linearVelocity.z);
+        if (horizontalInput == 0 && verticalInput == 0)
+        {
+            _rigidbody.linearVelocity = new Vector3(0, _rigidbody.linearVelocity.y, 0f);
+            _playerAnimator.SetBool("IsRunning", false);
+            if (_footstepCoroutine != null)
+            {
+                StopCoroutine(_footstepCoroutine);
+                _footstepCoroutine = null;
+            }
+            _playerAnimator.SetBool("IsIdle", true);
+        }
+        else
+        {
+            _playerAnimator.SetBool("IsRunning", true);
+            if (_footstepCoroutine == null)
+            {
+                _footstepCoroutine = StartCoroutine(PlayFootsteps());
+            }
+            _playerAnimator.SetBool("IsIdle", false);
+        }
         grounded = Physics.CheckSphere(groundCheck.position, groundFriction, whatIsGround);
 
         MyInput();
@@ -193,6 +230,18 @@ public class PlayerScript : MonoBehaviour
     private void FixedUpdate()
     {
         MovePlayer();
+        AdjustPlayerFly();
+    }
+    private void AdjustPlayerFly()
+    {
+        RaycastHit hit;
+        float maxRayDistance = 5f;
+        if (Physics.Raycast(transform.position, Vector3.down, out hit, maxRayDistance, whatIsGround))
+        {
+            float targetY = hit.point.y + 0.1f;
+            transform.position = new Vector3(transform.position.x, Mathf.Lerp(transform.position.y, targetY, Time.deltaTime * 10), transform.position.z);
+        }
+
     }
 
     private void TogglePause()

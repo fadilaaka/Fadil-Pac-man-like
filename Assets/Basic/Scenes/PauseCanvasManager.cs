@@ -15,9 +15,11 @@ public class PauseCanvasManager : MonoBehaviour
 
     public void Exit()
     {
-        SceneManager.LoadScene("MainMenu");
+        AudioListener.volume = 1f;
         Time.timeScale = 1;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
+        SceneManager.LoadScene("GameMainMenu");
+
     }
 }

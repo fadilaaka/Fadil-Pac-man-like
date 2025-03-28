@@ -71,7 +71,7 @@ public class Player : MonoBehaviour
         else
         {
             _health = 0;
-            SceneManager.LoadScene("LoseScene");
+            SceneManager.LoadScene("GameLoseScene");
         }
         UpdateUI();
     }

@@ -57,7 +57,7 @@ public class PickableManager : MonoBehaviour
             if (_coinCount <= 0)
             {
                 // Debug.Log("Win");
-                SceneManager.LoadScene("WinScene");
+                SceneManager.LoadScene("GameWinScene");
             }
             if (_scoreManager != null)
             {

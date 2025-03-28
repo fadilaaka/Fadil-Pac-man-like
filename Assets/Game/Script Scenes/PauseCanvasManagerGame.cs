@@ -15,7 +15,7 @@ public class PauseCanvasManagerGame : MonoBehaviour
 
     public void ExitGame()
     {
-        SceneManager.LoadScene("MainMenu");
+        SceneManager.LoadScene("GameMainMenu");
         Time.timeScale = 1;
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
